@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teleprompter de Cámara - Enfoque Directo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0b0d11;
+      --text-color: #f1f5f9;
+      --accent-color: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --guide-color: rgba(56, 189, 248, 0.45);
+      --panel-bg: rgba(18, 22, 31, 0.92);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --font-size: 38px;
+      --line-height: 1.45;
+      --reading-width: 480px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Indicador de centro superior (Cámara Web) */
+    .camera-pointer {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .camera-pointer-dot {
+      width: 10px;
+      height: 6px;
+      background: var(--accent-color);
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 0 12px var(--accent-color);
+    }
+
+    .camera-pointer-label {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 2px 8px;
+      border-radius: 0 0 6px 6px;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      border-top: none;
+    }
+
+    /* Línea guía de lectura fija cerca de la cámara */
+    .reading-marker {
+      position: fixed;
+      top: 90px;
+      left: 0;
+      right: 0;
+      height: 52px;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .reading-marker-box {
+      width: calc(var(--reading-width) + 80px);
+      height: 100%;
+      border-top: 1.5px dashed var(--guide-color);
+      border-bottom: 1.5px dashed var(--guide-color);
+      background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.07) 15%, rgba(56, 189, 248, 0.07) 85%, transparent 100%);
+      position: relative;
+    }
+
+    .reading-marker-box::before, .reading-marker-box::after {
+      content: '▶';
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent-color);
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    .reading-marker-box::before { left: -18px; }
+    .reading-marker-box::after { right: -18px; transform: translateY(-50%) rotate(180deg); }
+
+    /* Contenedor del texto desplazable */
+    #prompter-viewport {
+      flex: 1;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      position: relative;
+      cursor: grab;
+      scroll-behavior: auto;
+    }
+
+    #prompter-viewport::-webkit-scrollbar {
+      display: none;
+    }
+
+    #prompter-viewport:active {
+      cursor: grabbing;
+    }
+
+    .prompter-content-wrapper {
+      display: flex;
+      justify-content: center;
+      padding-top: 85px; /* Comienza pegado al visor superior bajo la cámara */
+      padding-bottom: 400px;
+      min-height: 100%;
+    }
+
+    #script-display {
+      width: var(--reading-width);
+      font-size: var(--font-size);
+      line-height: var(--line-height);
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: -0.01em;
+      word-spacing: 0.05em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      transition: width 0.2s ease, font-size 0.2s ease;
+    }
+
+    #script-display p {
+      margin-bottom: 1.4em;
+    }
+
+    /* Efecto espejo si se usa hardware prompter */
+    body.mirror-h #script-display {
+      transform: scaleX(-1);
+    }
+
+    /* Cuenta atrás */
+    #countdown-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 13, 17, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .countdown-number {
+      font-size: 120px;
+      font-weight: 800;
+      color: var(--accent-color);
+      animation: pulse 1s infinite alternate;
+    }
+
+    .countdown-label {
+      font-size: 20px;
+      color: #94a3b8;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(0.9); opacity: 0.7; }
+      to { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* BARRA DE CONTROLES INFERIOR (Cualquier botón abajo) */
+    .controls-dock {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border-color);
+      backdrop-filter: blur(16px);
+      z-index: 80;
+      padding: 12px 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .controls-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .main-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-primary {
+      background: var(--accent-color);
+      color: #04121d;
+      border-color: var(--accent-color);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      color: #000;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      border-color: #ef4444;
+      color: #fff;
+    }
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      font-size: 12px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-icon-sm {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: #273549;
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn-icon-sm:hover {
+      background: #38bdf8;
+      color: #0b0d11;
+    }
+
+    .val-badge {
+      min-width: 44px;
+      text-align: center;
+      font-weight: 700;
+      color: #38bdf8;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .slider {
+      width: 90px;
+      accent-color: var(--accent-color);
+      cursor: pointer;
+    }
+
+    /* Fila secundaria: ayudas, atajos y tips para no parecer que lees */
+    .controls-sub-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 8px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .hotkey-chips {
+      display: flex;
+      gap: 12px;
+    }
+
+    .hotkey-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kbd {
+      background: #334155;
+      color: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    .tips-badge {
+      color: #38bdf8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+    .tips-badge:hover {
+      text-decoration: underline;
+    }
+
+    /* Modal de edición del guion */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(6px);
+      z-index: 120;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 720px;
+      padding: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .script-textarea {
+      width: 100%;
+      height: 320px;
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 14px;
+      color: #f8fafc;
+      font-size: 16px;
+      line-height: 1.5;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      user-select: text;
+    }
+
+    .script-textarea:focus {
+      border-color: var(--accent-color);
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    /* Modal de consejos para no parecer que lees */
+    .advice-box {
+      background: #0f172a;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .advice-box ul {
+      margin-left: 20px;
+      margin-top: 6px;
+    }
+
+    .advice-box li {
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Marcador visual: Cámara Web (Centro y Arriba) -->
+  <div class="camera-pointer" id="cameraPointer">
+    <div class="camera-pointer-dot"></div>
+    <div class="camera-pointer-label">▲ Cámara aquí (Mantén tu mirada aquí) ▲</div>
+  </div>
+
+  <!-- Guía de lectura recomendada a nivel de ojos -->
+  <div class="reading-marker" id="readingMarker">
+    <div class="reading-marker-box" id="readingMarkerBox"></div>
+  </div>
+
+  <!-- Vista principal del texto -->
+  <div id="prompter-viewport">
+    <div class="prompter-content-wrapper">
+      <div id="script-display">
+        <p style="color: var(--accent-color); font-weight: 800; font-size: 1.15em; margin-bottom: 1.2em;">La falsa neutralidad de la ciencia.</p>
+        <p>¿Puede ser neutral la ciencia si, como sostiene la filósofa Diana Maffía, se pensó a la medida de la vida de los varones?</p>
+        <p>¡Buenas! Por acá Andrés León, y siguiendo con lo que venía planteando Samely, ahora nos toca meternos con una de las ideas más instaladas que tenemos sobre el conocimiento.</p>
+        <p>Durante mucho tiempo nos dijeron que sí: que la ciencia es objetiva y meritocrática.</p>
+        <p>Arocena recuerda que en el siglo XIX parecía llevar a un conocimiento absoluto y permanente, la “era de las certezas”, y que esa imagen se quebró en el siglo XX (Arocena, 1993, pp. 39-41).</p>
+        <p>O sea, la neutralidad no es un hecho de la naturaleza, sino una imagen histórica.</p>
+        <p>Y eso cuestiona Maffía: detrás de esa neutralidad hay una estructura androcéntrica, que toma la experiencia masculina como parámetro universal de lo humano (Maffía, 2008, pp. 2-3).</p>
+        <p>Y no era solo cuestión de prejuicios: la ley también marcaba la cancha.</p>
+        <p>Hasta bien entrado el siglo XX, el Código Civil argentino limitaba la capacidad civil de las mujeres casadas, y el voto femenino llegó recién en 1947, con la Ley 13.010.</p>
+        <p>Dentro de la ciencia, ¿qué costo pagaron las pioneras?</p>
+        <p>Cuando la RAGCyT (Red Argentina de Género, Ciencia y Tecnología, una asociación civil fundada en los años 90) estudió sus biografías, encontró que casi todas habían permanecido solteras, o se habían casado ya mayores con colegas, y no tenían hijos.</p>
+        <p>En cambio, el 75 % de sus colegas varones eran casados y podían coordinar su vida familiar y profesional.</p>
+        <p>Maffía lo dice con ironía: para tener las mismas oportunidades, las mujeres habrían necesitado “esposas” y no “esposos”, alguien que cuidara de todo en casa sin cobrar (Maffía, 2008, p. 3).</p>
+        <p>A eso se sumaba un doble mandato: ser madre de tiempo completo y científica de tiempo completo.</p>
+        <p>La astrofísica Gloria Dubner lo resumió así: “Nunca logré que en mi casa no se notara que trabajo, y en el trabajo no se notara que tengo hijos” (Dubner, 1995, como se citó en Maffía, 2008, p. 3).</p>
+        <p>A nivel mundial, el caso más célebre es el de Marie Curie: compartió el Nobel de Física de 1903 con su esposo Pierre y con Henri Becquerel, y en 1911 ganó sola el de Química, siendo la primera persona en recibir dos Nobel (Nobel Prize Outreach, s. f.).</p>
+        <p>Su historia muestra hasta dónde se podía llegar; los datos de Maffía muestran cuántas llegaban.</p>
+        <p>También en los laboratorios de I+D, que Arocena presenta como motor de la innovación del siglo XX (1993, pp. 42-45), hubo mujeres, aunque pioneras.</p>
+        <p>Katharine Blodgett fue la primera científica del laboratorio de investigación de General Electric y la primera mujer con doctorado en física de Cambridge (Science History Institute, s. f.).</p>
+        <p>Allí inventó el vidrio no reflectante, que se usó en periscopios y cámaras aéreas durante la Segunda Guerra (Lemelson-MIT, s. f.).</p>
+        <p>Y en Argentina, la UBA instaló en 1960 su primera computadora científica, Clementina, y la matemática Cecilia Berdichevsky fue la primera programadora del país (Universidad de Buenos Aires, s. f.).</p>
+        <p>Para Arocena, tener capacidad científica propia es clave para no depender de comprar tecnología ya hecha (1993, pp. 102-103).</p>
+        <p>¿Y hoy? Hannah Schmitz, ingeniera mecánica formada en Cambridge, es estratega principal del equipo Red Bull de Fórmula 1.</p>
+        <p>En una entrevista con el Departamento de Ingeniería de esa universidad, cuenta que, siendo mujer, ganarse la confianza de quienes debían seguir sus indicaciones le costó más al principio, pero que hoy tiene ese respeto y espera que otras jóvenes vean que ellas también pueden.</p>
+        <p>También cuenta que en 2019 acababa de volver a trabajar tras su primer hijo y quería demostrar que seguía haciendo bien su trabajo (Departamento de Ingeniería, Universidad de Cambridge, s. f.).</p>
+        <p>Su testimonio dialoga con el de Dubner: combinar maternidad y una carrera de alto nivel sigue exigiendo demostrar, una y otra vez, que se puede.</p>
+        <p>Un solo caso no cambia el sistema, pero muestra por qué importan los referentes.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cuenta regresiva antes de empezar a rodar -->
+  <div id="countdown-overlay">
+    <div class="countdown-number" id="countdownVal">3</div>
+    <div class="countdown-label">Mira fijo a la cámara...</div>
+  </div>
+
+  <!-- DOCK DE CONTROLES: ESTRICTAMENTE ABAJO -->
+  <footer class="controls-dock">
+    <div class="controls-top-row">
+      <!-- Botones principales -->
+      <div class="main-actions">
+        <button class="btn btn-primary" id="btnTogglePlay" title="Espacio para pausar/reanudar">
+          <span id="playIcon">▶</span> <span id="playText">Iniciar</span>
+        </button>
+        <button class="btn" id="btnRewind" title="Reiniciar al inicio">
+          <span>⏮</span> Reiniciar
+        </button>
+        <button class="btn" id="btnOpenEdit">
+          <span>✏️</span> Pegar / Editar Guion
+        </button>
+      </div>
+
+      <!-- Control de Velocidad con ajuste fino -->
+      <div class="control-group" title="Ajuste fino de velocidad (1.0 a 6.0)">
+        <label>Velocidad:</label>
+        <button class="btn-icon-sm" id="btnSpeedDown" title="Bajar velocidad (-0.1)">-</button>
+        <input type="range" class="slider" id="speedSlider" min="1.0" max="6.0" step="0.1" value="2.4">
+        <button class="btn-icon-sm" id="btnSpeedUp" title="Subir velocidad (+0.1)">+</button>
+        <span class="val-badge" id="speedBadge">2.4x</span>
+      </div>
+
+      <!-- Control de Tamaño de Letra -->
+      <div class="control-group">
+        <label>Letra:</label>
+        <button class="btn-icon-sm" id="btnFontDown">-</button>
+        <span class="val-badge" id="fontBadge">38px</span>
+        <button class="btn-icon-sm" id="btnFontUp">+</button>
+      </div>
+
+      <!-- Ancho del texto (Fundamental para evitar mover los ojos) -->
+      <div class="control-group" title="Un ancho angosto evita mover los ojos de lado a lado">
+        <label>Ancho (Anti-ojos):</label>
+        <button class="btn-icon-sm" id="btnWidthDown">-</button>
+        <span class="val-badge" id="widthBadge">480px</span>
+        <button class="btn-icon-sm" id="btnWidthUp">+</button>
+      </div>
+
+      <!-- Opciones extra: Cuenta atrás / Espejo / Guía visual / Pantalla Completa -->
+      <div class="control-group">
+        <label style="cursor:pointer;" title="Cuenta regresiva de 3 segundos antes de iniciar"><input type="checkbox" id="chkCountdown" checked> Cuenta 3s</label>
+        <span style="opacity: 0.3;">|</span>
+        <label style="cursor:pointer;"><input type="checkbox" id="chkGuide" checked> Guía</label>
+        <span style="opacity: 0.3;">|</span>
+        <label style="cursor:pointer;"><input type="checkbox" id="chkMirror"> Espejo</label>
+      </div>
+
+      <button class="btn" id="btnFullscreen" title="Elimina las pestañas del navegador para pegar el texto a la cámara física (F11)">
+        <span>⛶</span> Pantalla Completa
+      </button>
+    </div>
+
+    <!-- Fila inferior con atajos y tips -->
+    <div class="controls-sub-row">
+      <div class="hotkey-chips">
+        <span class="hotkey-chip"><span class="kbd">Espacio</span> Iniciar / Pausar</span>
+        <span class="hotkey-chip"><span class="kbd">▲</span> <span class="kbd">▼</span> Velocidad</span>
+        <span class="hotkey-chip"><span class="kbd">R</span> Reiniciar</span>
+        <span class="hotkey-chip"><span class="kbd">F</span> Pantalla Completa</span>
+        <span class="hotkey-chip"><span class="kbd">Esc</span> Editar Guion</span>
+      </div>
+      <div class="tips-badge" id="btnShowTips">
+        💡 Consejos para que no se note que lees
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal para pegar y editar el guion -->
+  <div class="modal-overlay" id="scriptModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Pega aquí tu guion</h2>
+        <button class="btn" id="btnCloseModal">✕ Cerrar</button>
+      </div>
+
+      <textarea class="script-textarea" id="scriptInput" placeholder="Pega o escribe aquí el texto de tu guion..."></textarea>
+
+      <div class="stats-bar">
+        <span id="wordCountLabel">0 palabras</span>
+        <span>•</span>
+        <span id="estTimeLabel">Tiempo estimado: 0 min</span>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn" id="btnCancelScript">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveScript">Aplicar Guion al Prompter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal con Consejos Anti-Detección de Lectura -->
+  <div class="modal-overlay" id="tipsModal">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h2>Trucos clave para que no se note que lees</h2>
+        <button class="btn" id="btnCloseTips">✕</button>
+      </div>
+      <div class="advice-box">
+        <strong>1. Mantén la columna de texto ESTRECHA (400px - 500px):</strong>
+        <p>Cuando el texto es ancho, las pupilas viajan de izquierda a derecha como en un partido de tenis. Al tenerlo angosto, tu visión periférica absorbe 3 o 4 palabras por línea sin girar los ojos.</p>
+      </div>
+      <div class="advice-box" style="margin-top: 10px;">
+        <strong>2. Aléjate un poco de la pantalla:</strong>
+        <p>Si estás a 60-80 cm de la pantalla de la PC y el texto está en el borde superior, el ángulo entre el texto y la cámara se reduce a casi 0°. Parecerá que miras 100% al lente.</p>
+      </div>
+      <div class="advice-box" style="margin-top: 10px;">
+        <strong>3. Usa la cuenta regresiva y parpadea con naturalidad:</strong>
+        <p>No fijes la mirada sin parpadear. Mueve ligeramente las manos o asiente ocasionalmente como en una conversación normal.</p>
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+        <button class="btn btn-primary" id="btnUnderstandTips">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Variables de Estado
+    let isPlaying = false;
+    let scrollSpeed = 2.4; // Nivel de velocidad calibrado (1.0 a 6.0, paso 0.1)
+    let fontSize = 38;
+    let readingWidth = 480;
+    let animationFrameId = null;
+    let countdownInterval = null;
+    let isCountingDown = false;
+
+    // Elementos DOM
+    const viewport = document.getElementById('prompter-viewport');
+    const scriptDisplay = document.getElementById('script-display');
+    const readingMarkerBox = document.getElementById('readingMarkerBox');
+    const readingMarker = document.getElementById('readingMarker');
+    const btnTogglePlay = document.getElementById('btnTogglePlay');
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    const btnRewind = document.getElementById('btnRewind');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedBadge = document.getElementById('speedBadge');
+    const btnSpeedUp = document.getElementById('btnSpeedUp');
+    const btnSpeedDown = document.getElementById('btnSpeedDown');
+    const fontBadge = document.getElementById('fontBadge');
+    const btnFontUp = document.getElementById('btnFontUp');
+    const btnFontDown = document.getElementById('btnFontDown');
+    const widthBadge = document.getElementById('widthBadge');
+    const btnWidthUp = document.getElementById('btnWidthUp');
+    const btnWidthDown = document.getElementById('btnWidthDown');
+    const chkGuide = document.getElementById('chkGuide');
+    const chkMirror = document.getElementById('chkMirror');
+    const chkCountdown = document.getElementById('chkCountdown');
+
+    // Modales
+    const scriptModal = document.getElementById('scriptModal');
+    const scriptInput = document.getElementById('scriptInput');
+    const btnOpenEdit = document.getElementById('btnOpenEdit');
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    const btnCancelScript = document.getElementById('btnCancelScript');
+    const btnSaveScript = document.getElementById('btnSaveScript');
+    const wordCountLabel = document.getElementById('wordCountLabel');
+    const estTimeLabel = document.getElementById('estTimeLabel');
+
+    const tipsModal = document.getElementById('tipsModal');
+    const btnShowTips = document.getElementById('btnShowTips');
+    const btnCloseTips = document.getElementById('btnCloseTips');
+    const btnUnderstandTips = document.getElementById('btnUnderstandTips');
+
+    // Soporte robusto para id kebab-case o camelCase
+    const countdownOverlay = document.getElementById('countdown-overlay') || document.getElementById('countdownOverlay');
+    const countdownVal = document.getElementById('countdownVal');
+
+    // Inicializar estilos CSS vars
+    function updateStyles() {
+      document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+      document.documentElement.style.setProperty('--reading-width', readingWidth + 'px');
+      fontBadge.textContent = fontSize + 'px';
+      widthBadge.textContent = readingWidth + 'px';
+      speedBadge.textContent = scrollSpeed.toFixed(1) + 'x';
+      speedSlider.value = scrollSpeed;
+    }
+
+    // Cálculo milimétrico de pixeles por frame según ritmo humano:
+    // 1.0 = ~0.22 px/frame (muy pausado)
+    // 2.0 = ~0.305 px/frame (ritmo tranquilo)
+    // 2.4 = ~0.34 px/frame (conversacional estándar, ritmo ideal)
+    // 3.0 = ~0.39 px/frame (fluido)
+    // 4.0 = ~0.475 px/frame (ágil)
+    // 5.0 = ~0.56 px/frame (lo que antes era velocidad 2)
+    // 6.0 = ~0.645 px/frame (muy rápido)
+    function getPixelsPerFrame(speed) {
+      return 0.22 + (speed - 1.0) * 0.085;
+    }
+
+    // Desplazamiento fluido
+    let preciseScroll = 0;
+
+    function step() {
+      if (!isPlaying) return;
+      preciseScroll += getPixelsPerFrame(scrollSpeed);
+      viewport.scrollTop = preciseScroll;
+
+      // Si llega al final
+      if (viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 50) {
+        stopPrompter();
+        return;
+      }
+      animationFrameId = requestAnimationFrame(step);
+    }
+
+    function startPrompter() {
+      if (isCountingDown) return;
+
+      // Si el usuario desmarcó la cuenta regresiva, inicia de inmediato
+      if (chkCountdown && !chkCountdown.checked) {
+        resumePrompterDirectly();
+        return;
+      }
+
+      isPlaying = false;
+      isCountingDown = true;
+      if (countdownOverlay) {
+        countdownOverlay.style.display = 'flex';
+      }
+      let count = 3;
+      if (countdownVal) countdownVal.textContent = count;
+      playText.textContent = '3...';
+      btnTogglePlay.classList.add('btn-danger');
+      btnTogglePlay.classList.remove('btn-primary');
+
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          if (countdownVal) countdownVal.textContent = count;
+          playText.textContent = count + '...';
+        } else {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          if (countdownOverlay) countdownOverlay.style.display = 'none';
+          isCountingDown = false;
+          resumePrompterDirectly();
+        }
+      }, 850);
+    }
+
+    function resumePrompterDirectly() {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      if (countdownOverlay) countdownOverlay.style.display = 'none';
+      isCountingDown = false;
+      isPlaying = true;
+      preciseScroll = viewport.scrollTop;
+      playIcon.textContent = '⏸';
+      playText.textContent = 'Pausar';
+      btnTogglePlay.classList.add('btn-danger');
+      btnTogglePlay.classList.remove('btn-primary');
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(step);
+    }
+
+    function stopPrompter() {
+      isPlaying = false;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      if (isCountingDown) {
+        if (countdownOverlay) countdownOverlay.style.display = 'none';
+        isCountingDown = false;
+      }
+      playIcon.textContent = '▶';
+      playText.textContent = (viewport.scrollTop > 10) ? 'Continuar' : 'Iniciar';
+      btnTogglePlay.classList.remove('btn-danger');
+      btnTogglePlay.classList.add('btn-primary');
+    }
+
+    function togglePlay() {
+      if (scriptModal.classList.contains('open') || tipsModal.classList.contains('open')) return;
+      
+      // Si está en cuenta regresiva y hace clic, cancela inmediatamente
+      if (isCountingDown) {
+        stopPrompter();
+        return;
+      }
+
+      if (isPlaying) {
+        stopPrompter();
+      } else {
+        if (viewport.scrollTop <= 15) {
+          startPrompter();
+        } else {
+          resumePrompterDirectly();
+        }
+      }
+    }
+
+    function rewind() {
+      stopPrompter();
+      viewport.scrollTop = 0;
+      preciseScroll = 0;
+      playText.textContent = 'Iniciar';
+    }
+
+    // Control de velocidad con ajuste fino
+    function setSpeed(newSpeed) {
+      scrollSpeed = Math.round(Math.max(1.0, Math.min(6.0, newSpeed)) * 10) / 10;
+      updateStyles();
+    }
+
+    speedSlider.addEventListener('input', (e) => setSpeed(parseFloat(e.target.value)));
+    btnSpeedUp.addEventListener('click', () => setSpeed(scrollSpeed + 0.1));
+    btnSpeedDown.addEventListener('click', () => setSpeed(scrollSpeed - 0.1));
+
+    // Control de tamaño de letra
+    function setFontSize(newSize) {
+      fontSize = Math.max(20, Math.min(70, newSize));
+      updateStyles();
+    }
+    btnFontUp.addEventListener('click', () => setFontSize(fontSize + 2));
+    btnFontDown.addEventListener('click', () => setFontSize(fontSize - 2));
+
+    // Control de ancho de texto (esencial para que no se note la lectura)
+    function setWidth(newWidth) {
+      readingWidth = Math.max(280, Math.min(800, newWidth));
+      updateStyles();
+    }
+    btnWidthUp.addEventListener('click', () => setWidth(readingWidth + 40));
+    btnWidthDown.addEventListener('click', () => setWidth(readingWidth - 40));
+
+    // Guía y Espejo
+    chkGuide.addEventListener('change', (e) => {
+      readingMarker.style.display = e.target.checked ? 'flex' : 'none';
+    });
+
+    chkMirror.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        document.body.classList.add('mirror-h');
+      } else {
+        document.body.classList.remove('mirror-h');
+      }
+    });
+
+    const btnFullscreen = document.getElementById('btnFullscreen');
+
+    // Pantalla Completa
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn('Fullscreen error:', err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    if (btnFullscreen) {
+      btnFullscreen.addEventListener('click', toggleFullscreen);
+    }
+
+    // Modal de edición de guion
+    function openScriptModal() {
+      stopPrompter();
+      // Extraer párrafos actuales
+      const paragraphs = Array.from(scriptDisplay.querySelectorAll('p')).map(p => p.textContent);
+      scriptInput.value = paragraphs.join('\n\n');
+      updateStats();
+      scriptModal.classList.add('open');
+      scriptInput.focus();
+    }
+
+    function closeScriptModal() {
+      scriptModal.classList.remove('open');
+    }
+
+    function updateStats() {
+      const text = scriptInput.value.trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      // Promedio de habla en español: 130-150 palabras por minuto
+      const minutes = (words / 140).toFixed(1);
+      wordCountLabel.textContent = `${words} palabras`;
+      estTimeLabel.textContent = `Tiempo estimado: ~${minutes} min (a ritmo normal)`;
+    }
+
+    scriptInput.addEventListener('input', updateStats);
+
+    btnOpenEdit.addEventListener('click', openScriptModal);
+    btnCloseModal.addEventListener('click', closeScriptModal);
+    btnCancelScript.addEventListener('click', closeScriptModal);
+
+    btnSaveScript.addEventListener('click', () => {
+      const text = scriptInput.value.trim();
+      if (!text) {
+        alert('Por favor escribe o pega algún texto.');
+        return;
+      }
+
+      // Reemplazar párrafos
+      const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0);
+      scriptDisplay.innerHTML = paragraphs.map(p => `<p>${escapeHTML(p)}</p>`).join('');
+      
+      closeScriptModal();
+      rewind();
+    });
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+
+    // Modal de Tips
+    btnShowTips.addEventListener('click', () => {
+      stopPrompter();
+      tipsModal.classList.add('open');
+    });
+    btnCloseTips.addEventListener('click', () => tipsModal.classList.remove('open'));
+    btnUnderstandTips.addEventListener('click', () => tipsModal.classList.remove('open'));
+
+    // Sincronizar scroll manual (rueda o arrastre)
+    viewport.addEventListener('scroll', () => {
+      if (!isPlaying) {
+        preciseScroll = viewport.scrollTop;
+      }
+    });
+
+    // Atajos de Teclado
+    window.addEventListener('keydown', (e) => {
+      // Ignorar atajos si el modal está escribiendo
+      if (scriptModal.classList.contains('open') && e.target === scriptInput) {
+        if (e.key === 'Escape') closeScriptModal();
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSpeed(scrollSpeed + 0.1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSpeed(scrollSpeed - 0.1);
+      } else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        rewind();
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (scriptModal.classList.contains('open')) {
+          closeScriptModal();
+        } else if (tipsModal.classList.contains('open')) {
+          tipsModal.classList.remove('open');
+        } else {
+          openScriptModal();
+        }
+      }
+    });
+
+    btnTogglePlay.addEventListener('click', togglePlay);
+    btnRewind.addEventListener('click', rewind);
+
+    // Inicialización
+    updateStyles();
+  </script>
+</body>
+</html>
