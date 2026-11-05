@@ -48,18 +48,6 @@ Aplicación web de teleprompter profesional diseñada específicamente para grab
 
 ## Cómo usar
 
-No requiere servidores, dependencias ni instalación de Node.js.
-
-1. Abre el archivo [`index.html`](index.html) con tu navegador habitual (Google Chrome, Microsoft Edge, Mozilla Firefox o Brave).
-2. Haz clic en **"Editar guion"** (o presiona <kbd>Esc</kbd>) y pega el texto de tu guion.
-3. Presiona **"Pantalla completa"** (<kbd>F</kbd>) para pegar el texto a la cámara física.
-4. Ajusta el tamaño de letra y la velocidad a tu gusto.
-5. Presiona la **barra espaciadora** (<kbd>Espacio</kbd>): se activará la cuenta regresiva de 3 segundos para que fijes tu mirada en la cámara y comiences a grabar.
-
----
-
-## Cómo usar
-
 ### Acceso directo en la web
 Puedes usar la aplicación de forma inmediata sin instalar nada ingresando al enlace público:
 👉 **[khalesidev.github.io/lector-dialogos](https://khalesidev.github.io/lector-dialogos/)**
