@@ -20,7 +20,7 @@
       --border-color: rgba(255, 255, 255, 0.08);
       --font-size: 38px;
       --line-height: 1.48;
-      --reading-width: 480px;
+      --reading-width: 410px;
     }
 
     * {
@@ -94,13 +94,13 @@
       to { opacity: 1; transform: scale(1.2); }
     }
 
-    /* Línea guía de lectura fija cerca de la cámara */
+    /* Línea guía de lectura fija cerca de la cámara (ubicada más arriba para contacto visual directo) */
     .reading-marker {
       position: fixed;
-      top: 90px;
+      top: 48px;
       left: 0;
       right: 0;
-      height: 52px;
+      height: 48px;
       pointer-events: none;
       z-index: 10;
       display: flex;
@@ -155,7 +155,7 @@
     .prompter-content-wrapper {
       display: flex;
       justify-content: center;
-      padding-top: 85px; /* Comienza pegado al visor superior bajo la cámara */
+      padding-top: 44px; /* Comienza pegado al visor superior bajo la cámara */
       padding-bottom: 400px;
       min-height: 100%;
     }
@@ -389,6 +389,29 @@
       stroke-linejoin: round;
       fill: none;
       flex-shrink: 0;
+    }
+
+    .select-preset {
+      background: rgba(30, 41, 59, 0.85);
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+    .select-preset:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .select-preset:focus {
+      border-color: var(--accent-color);
+    }
+    .select-preset option {
+      background: #0f172a;
+      color: #f1f5f9;
     }
 
     /* Fila secundaria: ayudas, atajos y tips para no parecer que lees */
@@ -628,14 +651,21 @@
         </button>
       </div>
 
-      <!-- Ancho del texto (Fundamental para evitar mover los ojos) -->
-      <div class="control-group" title="Un ancho angosto evita mover los ojos de lado a lado">
-        <label>Ancho (Anti-ojos):</label>
-        <button class="btn-icon-sm" id="btnWidthDown" title="Columna más estrecha">
+      <!-- Ancho del texto (control de palabras por renglón) -->
+      <div class="control-group" title="Controla cuántas palabras entran por renglón">
+        <label>Renglón:</label>
+        <select class="select-preset" id="widthPreset">
+          <option value="360">Ultra angosto (3-4 palabras)</option>
+          <option value="410" selected>Angosto / enfoque (4-5 palabras)</option>
+          <option value="520">Normal (6-7 palabras)</option>
+          <option value="640">Amplio (8-9 palabras)</option>
+          <option value="custom" id="optCustomWidth" disabled hidden>Personalizado</option>
+        </select>
+        <button class="btn-icon-sm" id="btnWidthDown" title="Menos palabras por renglón (-20px)">
           <svg class="icon-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
-        <span class="val-badge" id="widthBadge">480px</span>
-        <button class="btn-icon-sm" id="btnWidthUp" title="Columna más ancha">
+        <span class="val-badge" id="widthBadge">410px</span>
+        <button class="btn-icon-sm" id="btnWidthUp" title="Más palabras por renglón (+20px)">
           <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
@@ -729,7 +759,7 @@
     let isPlaying = false;
     let scrollSpeed = 2.4; // Nivel de velocidad calibrado (1.0 a 6.0, paso 0.1)
     let fontSize = 38;
-    let readingWidth = 480;
+    let readingWidth = 410; // Ancho inicial angosto para que entren menos palabras y no se muevan los ojos
     let animationFrameId = null;
     let countdownInterval = null;
     let isCountingDown = false;
@@ -755,6 +785,8 @@
     const widthBadge = document.getElementById('widthBadge');
     const btnWidthUp = document.getElementById('btnWidthUp');
     const btnWidthDown = document.getElementById('btnWidthDown');
+    const widthPreset = document.getElementById('widthPreset');
+    const optCustomWidth = document.getElementById('optCustomWidth');
     const chkGuide = document.getElementById('chkGuide');
     const chkMirror = document.getElementById('chkMirror');
     const chkCountdown = document.getElementById('chkCountdown');
@@ -788,6 +820,18 @@
       widthBadge.textContent = readingWidth + 'px';
       speedBadge.textContent = scrollSpeed.toFixed(1) + 'x';
       speedSlider.value = scrollSpeed;
+
+      // Sincronizar selector de presets de ancho
+      if (widthPreset) {
+        if ([360, 410, 520, 640].includes(readingWidth)) {
+          widthPreset.value = String(readingWidth);
+          if (optCustomWidth) optCustomWidth.hidden = true;
+        } else if (optCustomWidth) {
+          optCustomWidth.hidden = false;
+          optCustomWidth.selected = true;
+          optCustomWidth.textContent = `Personalizado (${readingWidth}px)`;
+        }
+      }
     }
 
     // Cálculo milimétrico de pixeles por frame según ritmo humano:
@@ -1008,13 +1052,18 @@
     btnFontUp.addEventListener('click', () => setFontSize(fontSize + 2));
     btnFontDown.addEventListener('click', () => setFontSize(fontSize - 2));
 
-    // Control de ancho de texto (esencial para que no se note la lectura)
+    // Control de ancho de texto / renglón
     function setWidth(newWidth) {
-      readingWidth = Math.max(280, Math.min(800, newWidth));
+      readingWidth = Math.max(260, Math.min(800, newWidth));
       updateStyles();
     }
-    btnWidthUp.addEventListener('click', () => setWidth(readingWidth + 40));
-    btnWidthDown.addEventListener('click', () => setWidth(readingWidth - 40));
+    if (widthPreset) {
+      widthPreset.addEventListener('change', (e) => {
+        setWidth(parseInt(e.target.value, 10));
+      });
+    }
+    btnWidthUp.addEventListener('click', () => setWidth(readingWidth + 20));
+    btnWidthDown.addEventListener('click', () => setWidth(readingWidth - 20));
 
     // Guía y Espejo
     chkGuide.addEventListener('change', (e) => {
