@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teleprompter de Cámara - Enfoque Directo</title>
+  <title>Teleprompter de cámara - Enfoque directo a cámara</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -527,11 +527,11 @@
 </head>
 <body>
 
-  <!-- Marcador visual: Cámara Web (Centro y Arriba) -->
+  <!-- Marcador visual: Cámara web (centro y arriba) -->
   <div class="camera-pointer" id="cameraPointer">
     <div class="camera-pointer-pill">
       <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">▲ CÁMARA AQUÍ (MIRA AL LENTE) ▲</span>
+      <span id="statusText">▲ Cámara aquí (mira al lente) ▲</span>
     </div>
   </div>
 
@@ -596,7 +596,7 @@
         </button>
         <button class="btn" id="btnOpenEdit" title="Editar o pegar texto (Esc)">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          <span>Editar Guion</span>
+          <span>Editar guion</span>
         </button>
       </div>
 
@@ -648,18 +648,18 @@
 
       <button class="btn" id="btnFullscreen" title="Elimina las pestañas del navegador para pegar el texto a la cámara física (F11)">
         <svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-        <span>Pantalla Completa</span>
+        <span>Pantalla completa</span>
       </button>
     </div>
 
     <!-- Fila inferior con atajos y tips -->
     <div class="controls-sub-row">
       <div class="hotkey-chips">
-        <span class="hotkey-chip"><span class="kbd">Espacio</span> Iniciar / Pausar</span>
+        <span class="hotkey-chip"><span class="kbd">Espacio</span> Iniciar / pausar</span>
         <span class="hotkey-chip"><span class="kbd">▲</span> <span class="kbd">▼</span> Velocidad</span>
         <span class="hotkey-chip"><span class="kbd">R</span> Reiniciar</span>
-        <span class="hotkey-chip"><span class="kbd">F</span> Pantalla Completa</span>
-        <span class="hotkey-chip"><span class="kbd">Esc</span> Editar Guion</span>
+        <span class="hotkey-chip"><span class="kbd">F</span> Pantalla completa</span>
+        <span class="hotkey-chip"><span class="kbd">Esc</span> Editar guion</span>
       </div>
       <div class="tips-badge" id="btnShowTips">
         <svg class="icon" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
@@ -689,7 +689,7 @@
 
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button class="btn" id="btnCancelScript">Cancelar</button>
-        <button class="btn btn-primary" id="btnSaveScript">Aplicar Guion al Prompter</button>
+        <button class="btn btn-primary" id="btnSaveScript">Aplicar guion al prompter</button>
       </div>
     </div>
   </div>
@@ -873,7 +873,7 @@
 
       // Actualizar estado en la cámara superior
       if (statusDot) statusDot.classList.add('active');
-      if (statusText) statusText.textContent = '● GRABANDO (MIRADA AL LENTE)';
+      if (statusText) statusText.textContent = '● Grabando (mirada al lente)';
 
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       animationFrameId = requestAnimationFrame(step);
@@ -901,7 +901,7 @@
       // Actualizar estado en la cámara superior
       if (statusDot) statusDot.classList.remove('active');
       if (statusText) {
-        statusText.textContent = (viewport.scrollTop > 10) ? '⏸ PAUSADO · MIRA AL LENTE' : '▲ CÁMARA AQUÍ (MIRA AL LENTE) ▲';
+        statusText.textContent = (viewport.scrollTop > 10) ? '⏸ Pausado · mira al lente' : '▲ Cámara aquí (mira al lente) ▲';
       }
     }
 
@@ -932,7 +932,7 @@
       playIcon.innerHTML = SVG_PLAY;
       playText.textContent = 'Iniciar';
       if (statusDot) statusDot.classList.remove('active');
-      if (statusText) statusText.textContent = '▲ CÁMARA AQUÍ (MIRA AL LENTE) ▲';
+      if (statusText) statusText.textContent = '▲ Cámara aquí (mira al lente) ▲';
     }
 
     // Control de velocidad con ajuste fino (soporta desde 0.5x)
