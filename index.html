@@ -9,15 +9,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-color: #0b0d11;
-      --text-color: #f1f5f9;
+      --bg-color: #07090e;
+      --text-color: #f8fafc;
       --accent-color: #38bdf8;
-      --accent-hover: #0ea5e9;
-      --guide-color: rgba(56, 189, 248, 0.45);
-      --panel-bg: rgba(18, 22, 31, 0.92);
-      --border-color: rgba(255, 255, 255, 0.12);
+      --accent-hover: #0284c7;
+      --accent-glow: rgba(56, 189, 248, 0.4);
+      --guide-color: rgba(56, 189, 248, 0.35);
+      --panel-bg: rgba(12, 16, 24, 0.88);
+      --border-color: rgba(255, 255, 255, 0.08);
       --font-size: 38px;
-      --line-height: 1.45;
+      --line-height: 1.48;
       --reading-width: 480px;
     }
 
@@ -30,6 +31,7 @@
 
     body {
       background-color: var(--bg-color);
+      background-image: radial-gradient(ellipse 70% 30% at 50% 0%, rgba(56, 189, 248, 0.05), transparent 75%);
       color: var(--text-color);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       overflow: hidden;
@@ -37,6 +39,7 @@
       width: 100vw;
       display: flex;
       flex-direction: column;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* Indicador de centro superior (Cámara Web) */
@@ -52,25 +55,42 @@
       pointer-events: none;
     }
 
-    .camera-pointer-dot {
-      width: 10px;
-      height: 6px;
-      background: var(--accent-color);
-      border-radius: 0 0 8px 8px;
-      box-shadow: 0 0 12px var(--accent-color);
-    }
-
-    .camera-pointer-label {
-      font-size: 10px;
-      letter-spacing: 1px;
+    .camera-pointer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10.5px;
+      letter-spacing: 1.2px;
       text-transform: uppercase;
-      color: #94a3b8;
-      background: rgba(15, 23, 42, 0.8);
-      padding: 2px 8px;
-      border-radius: 0 0 6px 6px;
-      font-weight: 600;
+      color: #cbd5e1;
+      background: rgba(13, 18, 28, 0.9);
+      padding: 4px 14px;
+      border-radius: 0 0 10px 10px;
+      font-weight: 700;
       border: 1px solid var(--border-color);
       border-top: none;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      transition: all 0.25s ease;
+    }
+
+    .status-dot.active {
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+      animation: pulseDot 1s infinite alternate;
+    }
+
+    @keyframes pulseDot {
+      from { opacity: 0.6; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1.2); }
     }
 
     /* Línea guía de lectura fija cerca de la cámara */
@@ -90,23 +110,27 @@
     .reading-marker-box {
       width: calc(var(--reading-width) + 80px);
       height: 100%;
-      border-top: 1.5px dashed var(--guide-color);
-      border-bottom: 1.5px dashed var(--guide-color);
-      background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.07) 15%, rgba(56, 189, 248, 0.07) 85%, transparent 100%);
+      border-top: 1px solid rgba(56, 189, 248, 0.35);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.35);
+      background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.05) 15%, rgba(56, 189, 248, 0.05) 85%, transparent 100%);
       position: relative;
+      border-radius: 6px;
     }
 
     .reading-marker-box::before, .reading-marker-box::after {
-      content: '▶';
+      content: '›';
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      color: var(--accent-color);
-      font-size: 14px;
-      opacity: 0.8;
+      color: #38bdf8;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+      opacity: 0.9;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
     }
-    .reading-marker-box::before { left: -18px; }
-    .reading-marker-box::after { right: -18px; transform: translateY(-50%) rotate(180deg); }
+    .reading-marker-box::before { left: -16px; }
+    .reading-marker-box::after { right: -16px; transform: translateY(-50%) rotate(180deg); }
 
     /* Contenedor del texto desplazable */
     #prompter-viewport {
@@ -142,9 +166,10 @@
       font-weight: 700;
       text-align: center;
       letter-spacing: -0.01em;
-      word-spacing: 0.05em;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-      transition: width 0.2s ease, font-size 0.2s ease;
+      word-spacing: 0.04em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
+      /* Sin transición en font-size para que el texto NO se desplace ni baile */
+      transition: width 0.2s ease;
     }
 
     #script-display p {
@@ -160,8 +185,8 @@
     #countdown-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(11, 13, 17, 0.85);
-      backdrop-filter: blur(4px);
+      background: rgba(7, 9, 14, 0.88);
+      backdrop-filter: blur(8px);
       z-index: 100;
       display: none;
       justify-content: center;
@@ -170,9 +195,10 @@
     }
 
     .countdown-number {
-      font-size: 120px;
-      font-weight: 800;
+      font-size: 130px;
+      font-weight: 900;
       color: var(--accent-color);
+      text-shadow: 0 0 30px rgba(56, 189, 248, 0.6);
       animation: pulse 1s infinite alternate;
     }
 
@@ -181,11 +207,12 @@
       color: #94a3b8;
       margin-top: 10px;
       font-weight: 600;
+      letter-spacing: 0.5px;
     }
 
     @keyframes pulse {
-      from { transform: scale(0.9); opacity: 0.7; }
-      to { transform: scale(1.1); opacity: 1; }
+      from { transform: scale(0.92); opacity: 0.75; }
+      to { transform: scale(1.08); opacity: 1; }
     }
 
     /* BARRA DE CONTROLES INFERIOR (Cualquier botón abajo) */
@@ -196,13 +223,14 @@
       right: 0;
       background: var(--panel-bg);
       border-top: 1px solid var(--border-color);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
       z-index: 80;
-      padding: 12px 20px 14px;
+      padding: 12px 24px 14px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 -12px 35px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
 
     .controls-top-row {
@@ -220,64 +248,73 @@
     }
 
     .btn {
-      background: #1e293b;
+      background: rgba(30, 41, 59, 0.75);
       color: #f8fafc;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      padding: 9px 16px;
-      font-size: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9px;
+      padding: 8px 16px;
+      font-size: 13.5px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       transition: all 0.15s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
 
     .btn:hover {
-      background: #334155;
-      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(51, 65, 85, 0.85);
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: translateY(-1px);
     }
 
     .btn:active {
-      transform: scale(0.96);
+      transform: scale(0.96) translateY(0);
     }
 
     .btn-primary {
-      background: var(--accent-color);
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
       color: #04121d;
-      border-color: var(--accent-color);
+      border-color: rgba(56, 189, 248, 0.6);
+      font-weight: 700;
+      box-shadow: 0 2px 12px rgba(14, 165, 233, 0.35);
     }
 
     .btn-primary:hover {
-      background: var(--accent-hover);
-      color: #000;
+      background: linear-gradient(135deg, #7dd3fc 0%, #0369a1 100%);
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.5);
     }
 
     .btn-danger {
-      background: #dc2626;
-      border-color: #ef4444;
+      background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      border-color: #fb7185;
       color: #fff;
+      box-shadow: 0 2px 12px rgba(225, 29, 72, 0.35);
     }
     .btn-danger:hover {
-      background: #b91c1c;
+      background: linear-gradient(135deg, #fb7185 0%, #be123c 100%);
     }
 
     .control-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(15, 23, 42, 0.7);
+      background: rgba(22, 28, 42, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.08);
       padding: 6px 12px;
-      border-radius: 8px;
+      border-radius: 9px;
       font-size: 13px;
       color: #cbd5e1;
+      transition: border-color 0.15s ease;
+    }
+    .control-group:hover {
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
     .control-group label {
       font-weight: 600;
-      font-size: 12px;
+      font-size: 11.5px;
       color: #94a3b8;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -291,15 +328,20 @@
       align-items: center;
       justify-content: center;
       border-radius: 6px;
-      background: #273549;
+      background: rgba(39, 53, 73, 0.8);
       color: #e2e8f0;
       border: 1px solid rgba(255, 255, 255, 0.1);
       cursor: pointer;
       font-weight: 700;
+      transition: all 0.15s ease;
     }
     .btn-icon-sm:hover {
       background: #38bdf8;
       color: #0b0d11;
+      border-color: #38bdf8;
+    }
+    .btn-icon-sm:active {
+      transform: scale(0.92);
     }
 
     .val-badge {
@@ -308,12 +350,44 @@
       font-weight: 700;
       color: #38bdf8;
       font-variant-numeric: tabular-nums;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 12px;
     }
 
     .slider {
-      width: 90px;
+      width: 95px;
       accent-color: var(--accent-color);
       cursor: pointer;
+    }
+
+    /* Iconos Vectoriales Estilo Lucide */
+    .icon {
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      vertical-align: middle;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+    }
+
+    .icon-sm {
+      width: 13px;
+      height: 13px;
+      display: inline-block;
+      vertical-align: middle;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
     }
 
     /* Fila secundaria: ayudas, atajos y tips para no parecer que lees */
@@ -341,11 +415,12 @@
     .kbd {
       background: #334155;
       color: #f1f5f9;
-      padding: 1px 6px;
+      padding: 2px 6px;
       border-radius: 4px;
       font-size: 11px;
       font-family: monospace;
       font-weight: bold;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .tips-badge {
@@ -454,8 +529,10 @@
 
   <!-- Marcador visual: Cámara Web (Centro y Arriba) -->
   <div class="camera-pointer" id="cameraPointer">
-    <div class="camera-pointer-dot"></div>
-    <div class="camera-pointer-label">▲ Cámara aquí (Mantén tu mirada aquí) ▲</div>
+    <div class="camera-pointer-pill">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">▲ CÁMARA AQUÍ (MIRA AL LENTE) ▲</span>
+    </div>
   </div>
 
   <!-- Guía de lectura recomendada a nivel de ojos -->
@@ -510,39 +587,54 @@
       <!-- Botones principales -->
       <div class="main-actions">
         <button class="btn btn-primary" id="btnTogglePlay" title="Espacio para pausar/reanudar">
-          <span id="playIcon">▶</span> <span id="playText">Iniciar</span>
+          <span id="playIcon"><svg class="icon" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/></svg></span>
+          <span id="playText">Iniciar</span>
         </button>
-        <button class="btn" id="btnRewind" title="Reiniciar al inicio">
-          <span>⏮</span> Reiniciar
+        <button class="btn" id="btnRewind" title="Reiniciar al inicio (R)">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          <span>Reiniciar</span>
         </button>
-        <button class="btn" id="btnOpenEdit">
-          <span>✏️</span> Pegar / Editar Guion
+        <button class="btn" id="btnOpenEdit" title="Editar o pegar texto (Esc)">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Editar Guion</span>
         </button>
       </div>
 
-      <!-- Control de Velocidad con ajuste fino -->
-      <div class="control-group" title="Ajuste fino de velocidad (1.0 a 6.0)">
+      <!-- Control de Velocidad con ajuste fino (incluye velocidades más lentas 0.5x, 0.8x) -->
+      <div class="control-group" title="Ajuste fino de velocidad (0.5 a 6.0)">
         <label>Velocidad:</label>
-        <button class="btn-icon-sm" id="btnSpeedDown" title="Bajar velocidad (-0.1)">-</button>
-        <input type="range" class="slider" id="speedSlider" min="1.0" max="6.0" step="0.1" value="2.4">
-        <button class="btn-icon-sm" id="btnSpeedUp" title="Subir velocidad (+0.1)">+</button>
+        <button class="btn-icon-sm" id="btnSpeedDown" title="Bajar velocidad (-0.1)">
+          <svg class="icon-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <input type="range" class="slider" id="speedSlider" min="0.5" max="6.0" step="0.1" value="2.4">
+        <button class="btn-icon-sm" id="btnSpeedUp" title="Subir velocidad (+0.1)">
+          <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
         <span class="val-badge" id="speedBadge">2.4x</span>
       </div>
 
       <!-- Control de Tamaño de Letra -->
       <div class="control-group">
         <label>Letra:</label>
-        <button class="btn-icon-sm" id="btnFontDown">-</button>
+        <button class="btn-icon-sm" id="btnFontDown" title="Reducir letra">
+          <svg class="icon-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
         <span class="val-badge" id="fontBadge">38px</span>
-        <button class="btn-icon-sm" id="btnFontUp">+</button>
+        <button class="btn-icon-sm" id="btnFontUp" title="Aumentar letra">
+          <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
       </div>
 
       <!-- Ancho del texto (Fundamental para evitar mover los ojos) -->
       <div class="control-group" title="Un ancho angosto evita mover los ojos de lado a lado">
         <label>Ancho (Anti-ojos):</label>
-        <button class="btn-icon-sm" id="btnWidthDown">-</button>
+        <button class="btn-icon-sm" id="btnWidthDown" title="Columna más estrecha">
+          <svg class="icon-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
         <span class="val-badge" id="widthBadge">480px</span>
-        <button class="btn-icon-sm" id="btnWidthUp">+</button>
+        <button class="btn-icon-sm" id="btnWidthUp" title="Columna más ancha">
+          <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
       </div>
 
       <!-- Opciones extra: Cuenta atrás / Espejo / Guía visual / Pantalla Completa -->
@@ -555,7 +647,8 @@
       </div>
 
       <button class="btn" id="btnFullscreen" title="Elimina las pestañas del navegador para pegar el texto a la cámara física (F11)">
-        <span>⛶</span> Pantalla Completa
+        <svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        <span>Pantalla Completa</span>
       </button>
     </div>
 
@@ -569,7 +662,8 @@
         <span class="hotkey-chip"><span class="kbd">Esc</span> Editar Guion</span>
       </div>
       <div class="tips-badge" id="btnShowTips">
-        💡 Consejos para que no se note que lees
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+        <span>Consejos para no parecer que lees</span>
       </div>
     </div>
   </footer>
@@ -579,7 +673,10 @@
     <div class="modal-card">
       <div class="modal-header">
         <h2>Pega aquí tu guion</h2>
-        <button class="btn" id="btnCloseModal">✕ Cerrar</button>
+        <button class="btn" id="btnCloseModal">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>Cerrar</span>
+        </button>
       </div>
 
       <textarea class="script-textarea" id="scriptInput" placeholder="Pega o escribe aquí el texto de tu guion..."></textarea>
@@ -602,7 +699,9 @@
     <div class="modal-card" style="max-width: 580px;">
       <div class="modal-header">
         <h2>Trucos clave para que no se note que lees</h2>
-        <button class="btn" id="btnCloseTips">✕</button>
+        <button class="btn" id="btnCloseTips" style="padding: 6px 10px;">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
       <div class="advice-box">
         <strong>1. Mantén la columna de texto ESTRECHA (400px - 500px):</strong>
@@ -640,6 +739,8 @@
     const btnTogglePlay = document.getElementById('btnTogglePlay');
     const playIcon = document.getElementById('playIcon');
     const playText = document.getElementById('playText');
+    const SVG_PLAY = `<svg class="icon" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/></svg>`;
+    const SVG_PAUSE = `<svg class="icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>`;
     const btnRewind = document.getElementById('btnRewind');
     const speedSlider = document.getElementById('speedSlider');
     const speedBadge = document.getElementById('speedBadge');
@@ -654,6 +755,8 @@
     const chkGuide = document.getElementById('chkGuide');
     const chkMirror = document.getElementById('chkMirror');
     const chkCountdown = document.getElementById('chkCountdown');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
 
     // Modales
     const scriptModal = document.getElementById('scriptModal');
@@ -685,14 +788,19 @@
     }
 
     // Cálculo milimétrico de pixeles por frame según ritmo humano:
-    // 1.0 = ~0.22 px/frame (muy pausado)
+    // 0.5 = ~0.11 px/frame (~6.6 px/s, super lenta/pausada)
+    // 0.8 = ~0.176 px/frame (~10.5 px/s, lectura lenta de práctica)
+    // 1.0 = ~0.22 px/frame (~13.2 px/s, pausada)
     // 2.0 = ~0.305 px/frame (ritmo tranquilo)
     // 2.4 = ~0.34 px/frame (conversacional estándar, ritmo ideal)
     // 3.0 = ~0.39 px/frame (fluido)
     // 4.0 = ~0.475 px/frame (ágil)
-    // 5.0 = ~0.56 px/frame (lo que antes era velocidad 2)
-    // 6.0 = ~0.645 px/frame (muy rápido)
+    // 5.0 = ~0.56 px/frame (rápido)
+    // 6.0 = ~0.645 px/frame (máximo)
     function getPixelsPerFrame(speed) {
+      if (speed < 1.0) {
+        return Math.max(0.08, 0.22 - (1.0 - speed) * 0.22);
+      }
       return 0.22 + (speed - 1.0) * 0.085;
     }
 
@@ -758,10 +866,15 @@
       isCountingDown = false;
       isPlaying = true;
       preciseScroll = viewport.scrollTop;
-      playIcon.textContent = '⏸';
+      playIcon.innerHTML = SVG_PAUSE;
       playText.textContent = 'Pausar';
       btnTogglePlay.classList.add('btn-danger');
       btnTogglePlay.classList.remove('btn-primary');
+
+      // Actualizar estado en la cámara superior
+      if (statusDot) statusDot.classList.add('active');
+      if (statusText) statusText.textContent = '● GRABANDO (MIRADA AL LENTE)';
+
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       animationFrameId = requestAnimationFrame(step);
     }
@@ -780,10 +893,16 @@
         if (countdownOverlay) countdownOverlay.style.display = 'none';
         isCountingDown = false;
       }
-      playIcon.textContent = '▶';
+      playIcon.innerHTML = SVG_PLAY;
       playText.textContent = (viewport.scrollTop > 10) ? 'Continuar' : 'Iniciar';
       btnTogglePlay.classList.remove('btn-danger');
       btnTogglePlay.classList.add('btn-primary');
+
+      // Actualizar estado en la cámara superior
+      if (statusDot) statusDot.classList.remove('active');
+      if (statusText) {
+        statusText.textContent = (viewport.scrollTop > 10) ? '⏸ PAUSADO · MIRA AL LENTE' : '▲ CÁMARA AQUÍ (MIRA AL LENTE) ▲';
+      }
     }
 
     function togglePlay() {
@@ -810,12 +929,15 @@
       stopPrompter();
       viewport.scrollTop = 0;
       preciseScroll = 0;
+      playIcon.innerHTML = SVG_PLAY;
       playText.textContent = 'Iniciar';
+      if (statusDot) statusDot.classList.remove('active');
+      if (statusText) statusText.textContent = '▲ CÁMARA AQUÍ (MIRA AL LENTE) ▲';
     }
 
-    // Control de velocidad con ajuste fino
+    // Control de velocidad con ajuste fino (soporta desde 0.5x)
     function setSpeed(newSpeed) {
-      scrollSpeed = Math.round(Math.max(1.0, Math.min(6.0, newSpeed)) * 10) / 10;
+      scrollSpeed = Math.round(Math.max(0.5, Math.min(6.0, newSpeed)) * 10) / 10;
       updateStyles();
     }
 
@@ -823,10 +945,57 @@
     btnSpeedUp.addEventListener('click', () => setSpeed(scrollSpeed + 0.1));
     btnSpeedDown.addEventListener('click', () => setSpeed(scrollSpeed - 0.1));
 
-    // Control de tamaño de letra
+    // Control de tamaño de letra con anclaje inteligente (el texto NO se desplaza)
     function setFontSize(newSize) {
+      const oldSize = fontSize;
       fontSize = Math.max(20, Math.min(70, newSize));
+      if (fontSize === oldSize) return;
+
+      // 1. Si está al inicio del texto, asegurar que permanezca totalmente quieto en 0
+      if (viewport.scrollTop <= 15) {
+        updateStyles();
+        viewport.scrollTop = 0;
+        preciseScroll = 0;
+        return;
+      }
+
+      // 2. Si ya ha hecho scroll, anclar exactamente el párrafo visible en la guía
+      const markerRect = readingMarker.getBoundingClientRect();
+      const targetY = markerRect.top + markerRect.height / 2;
+
+      const paragraphs = Array.from(scriptDisplay.querySelectorAll('p'));
+      let anchorEl = null;
+      let offsetRatio = 0;
+
+      for (const p of paragraphs) {
+        const r = p.getBoundingClientRect();
+        if (r.top <= targetY && r.bottom >= targetY) {
+          anchorEl = p;
+          offsetRatio = (targetY - r.top) / (r.height || 1);
+          break;
+        }
+      }
+
+      if (!anchorEl && paragraphs.length > 0) {
+        anchorEl = paragraphs.reduce((prev, curr) => {
+          const pDist = Math.abs(prev.getBoundingClientRect().top - targetY);
+          const cDist = Math.abs(curr.getBoundingClientRect().top - targetY);
+          return cDist < pDist ? curr : prev;
+        });
+        offsetRatio = 0;
+      }
+
+      // Aplicar nuevo tamaño de letra instantáneamente
       updateStyles();
+
+      // Corregir la posición de scroll al instante para que la frase leída no se mueva
+      if (anchorEl) {
+        const newR = anchorEl.getBoundingClientRect();
+        const newTargetY = newR.top + newR.height * offsetRatio;
+        const diff = newTargetY - targetY;
+        viewport.scrollTop += diff;
+        preciseScroll = viewport.scrollTop;
+      }
     }
     btnFontUp.addEventListener('click', () => setFontSize(fontSize + 2));
     btnFontDown.addEventListener('click', () => setFontSize(fontSize - 2));
