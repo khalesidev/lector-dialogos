@@ -58,6 +58,20 @@ No requiere servidores, dependencias ni instalación de Node.js.
 
 ---
 
+## Cómo usar
+
+### Acceso directo en la web
+Puedes usar la aplicación de forma inmediata sin instalar nada ingresando al enlace público:
+👉 **[khalesidev.github.io/lector-dialogos](https://khalesidev.github.io/lector-dialogos/)**
+
+*(También puedes clonar el repositorio y abrir `index.html` de forma local en tu computadora; funciona sin conexión, sin dependencias y sin Node.js).*
+
+### Pasos para grabar
+1. Haz clic en **"Editar guion"** (o presiona Esc) y pega el texto que vas a leer.
+2. Presiona **"Pantalla completa"** (F) para ocultar las pestañas y pegar el texto a la altura del lente de tu cámara.
+3. Ajusta el tamaño de letra y la velocidad según tu preferencia.
+4. Presiona la **barra espaciadora** (Espacio): comenzará la cuenta regresiva de 3 segundos para que fijes la mirada en la cámara y empieces a grabar.
+
 ## Consejos para que no se note que lees
 
 1. **Distancia a la pantalla:** Siéntate a unos 60-80 cm de tu monitor o laptop. A esa distancia, el ángulo visual entre el borde superior del texto y la cámara se reduce a casi 0°.
