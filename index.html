@@ -834,34 +834,46 @@
       }
     }
 
-    // Cálculo milimétrico de pixeles por frame según ritmo humano:
-    // 0.5 = ~0.11 px/frame (~6.6 px/s, super lenta/pausada)
-    // 0.8 = ~0.176 px/frame (~10.5 px/s, lectura lenta de práctica)
-    // 1.0 = ~0.22 px/frame (~13.2 px/s, pausada)
-    // 2.0 = ~0.305 px/frame (ritmo tranquilo)
-    // 2.4 = ~0.34 px/frame (conversacional estándar, ritmo ideal)
-    // 3.0 = ~0.39 px/frame (fluido)
-    // 4.0 = ~0.475 px/frame (ágil)
-    // 5.0 = ~0.56 px/frame (rápido)
-    // 6.0 = ~0.645 px/frame (máximo)
-    function getPixelsPerFrame(speed) {
+    // Velocidad en píxeles por segundo (independiente de la frecuencia de refresco del monitor).
+    // Estos valores se calcularon multiplicando los px/frame anteriores × 60Hz como referencia.
+    // 0.5x →  6.6 px/s   (pausadísima)
+    // 1.0x → 13.2 px/s   (muy pausada)
+    // 2.0x → 18.3 px/s   (tranquila)
+    // 2.4x → 20.4 px/s   (conversacional — ritmo ideal)
+    // 3.0x → 23.4 px/s   (fluido)
+    // 4.0x → 28.5 px/s   (ágil)
+    // 5.0x → 33.6 px/s   (rápido)
+    // 6.0x → 38.7 px/s   (máximo)
+    function getPixelsPerSecond(speed) {
       if (speed < 1.0) {
-        return Math.max(0.08, 0.22 - (1.0 - speed) * 0.22);
+        return Math.max(4.8, (0.22 - (1.0 - speed) * 0.22) * 60);
       }
-      return 0.22 + (speed - 1.0) * 0.085;
+      return (0.22 + (speed - 1.0) * 0.085) * 60;
     }
 
     // Desplazamiento fluido
     let preciseScroll = 0;
+    let lastTimestamp = null;   // Para delta-time: null = primer frame tras reanudación
 
-    function step() {
+    function step(timestamp) {
       if (!isPlaying) return;
+
+      // Primer frame tras (re)inicio: solo fijamos la referencia de tiempo y esperamos el siguiente
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+        animationFrameId = requestAnimationFrame(step);
+        return;
+      }
+
+      const delta = Math.min(timestamp - lastTimestamp, 100); // cap a 100ms (ej: pestaña en segundo plano)
+      lastTimestamp = timestamp;
+
       // Compensación inteligente por tamaño de fuente:
       // Al achicar la letra, las líneas son más bajas y entran más palabras.
       // Multiplicamos por (fontSize / 38) para que el ritmo de palabras por minuto
-      // que lee el locutor sea exactamente el mismo sin importar si la letra es chica o grande.
+      // sea el mismo sin importar si la letra es chica o grande.
       const fontFactor = fontSize / 38;
-      preciseScroll += getPixelsPerFrame(scrollSpeed) * fontFactor;
+      preciseScroll += getPixelsPerSecond(scrollSpeed) * fontFactor * (delta / 1000);
       viewport.scrollTop = preciseScroll;
 
       // Si llega al final
@@ -933,6 +945,7 @@
 
     function stopPrompter() {
       isPlaying = false;
+      lastTimestamp = null;
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -981,6 +994,7 @@
       stopPrompter();
       viewport.scrollTop = 0;
       preciseScroll = 0;
+      lastTimestamp = null;
       playIcon.innerHTML = SVG_PLAY;
       playText.textContent = 'Iniciar';
       if (statusDot) statusDot.classList.remove('active');
